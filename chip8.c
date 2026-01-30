@@ -203,7 +203,7 @@ void emulate(Chip8 *chip){
       switch(opcode & 0x00FF){
         case 0x1E: //Fx1E (Set I = I + Vx)
           {
-            uint16_t x = (opcode & 0x0F00) >> 8;
+            uint8_t x = (opcode & 0x0F00) >> 8;
             chip->I += chip->V[x];
           } 
         break;
