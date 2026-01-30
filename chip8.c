@@ -109,6 +109,29 @@ void emulate(Chip8 *chip){
       chip->pc = opcode & 0x0FFF; 
       printf("JUMP a 0x%X\n", chip->pc);
       break;
+    
+    case 0x2000: //CALL (call subroutine at nnn)
+      {
+        uint16_t nnn = (opcode & 0x0FFF);
+        chip->stack[chip->sp] = chip->pc;
+        chip->sp++;
+
+        chip->pc = nnn;
+
+        printf("Call subroutine at %d\n", nnn);
+      }
+      break;
+
+    case 0x4000: //SNE 4xkk (Skip next instruction if Vx != kk)
+      {
+        uint8_t kk = (opcode & 0x00FF);
+        uint8_t x = (opcode & 0x0F00) >> 8;
+        if(chip->V[x] != kk){
+          chip->pc += 2;
+          printf("SNE skipping next instruction\n");
+        }
+      }
+      break;
 
     case 0x6000: //6XNN -> set V[X] = NN
       {
@@ -136,7 +159,7 @@ void emulate(Chip8 *chip){
       printf("SET\n");
       break;
 
-    case 0xD000: 
+    case 0xD000: //Dxyn (Display n-byte sprite) 
     {
         uint8_t vx = (opcode & 0x0F00) >> 8;
         uint8_t vy = (opcode & 0x00F0) >> 4;
@@ -176,7 +199,19 @@ void emulate(Chip8 *chip){
     }
     break;
 
+    case 0xF000:
+      switch(opcode & 0x00FF){
+        case 0x1E: //Fx1E (Set I = I + Vx)
+          {
+            uint16_t x = (opcode & 0x0F00) >> 8;
+            chip->I += chip->V[x];
+          } 
+        break;
+      }
+    break;
+
     default:
       printf("Opcode unknown: 0x%X\n", opcode);
   }
 }
+
