@@ -121,6 +121,18 @@ void emulate(Chip8 *chip){
         printf("Call subroutine at %d\n", nnn);
       }
       break;
+    
+    case 0x3000: //SE 3xkk -> Skip next instruction if Vx = kk
+      {
+        uint8_t x = (opcode & 0x0F00) >> 8;
+        uint8_t kk = (opcode & 0x00FF);
+
+        if(chip->V[x] == kk){
+          chip->pc += 2;
+          printf("SE skipping next instruction\n");
+        }
+      }
+    break;
 
     case 0x4000: //SNE 4xkk (Skip next instruction if Vx != kk)
       {
@@ -132,6 +144,18 @@ void emulate(Chip8 *chip){
         }
       }
       break;
+    
+    case 0x5000: //5xy0 Skip next instruction if Vx = Vy
+      {
+        uint8_t x = (opcode & 0x0F00) >> 8;
+        uint8_t y = (opcode & 0x00F0) >> 4;
+
+        if(chip->V[x] == chip->V[y]){
+          chip->pc += 2;
+          printf("5xy0 Skipping next instruction (V[%d] != V[%d])\n", x,y);
+        }
+      }
+    break;
 
     case 0x6000: //6XNN -> set V[X] = NN
       {
@@ -153,6 +177,32 @@ void emulate(Chip8 *chip){
         printf("ADD V[%d] += %d\n", x, nn);
     }
     break;
+    
+    case 0x8000:
+      switch(opcode & 0x000F){
+        case 0: //8xy0
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+
+            chip->V[x] = chip->V[y];
+            printf("8xy0 Set V[%d] = v[%d]\n", x,y);
+          }
+        break;
+      }
+    break;
+
+    case 0x9000: // 9xy0 Skip next instruction if Vx != Vy
+      {
+        uint8_t x = (opcode & 0x0F00) >> 8;
+        uint8_t y = (opcode & 0x00F0) >> 4;
+
+        if (chip->V[x] != chip->V[y]) {
+          chip->pc += 2;
+          printf("9xy0 Skipping next instruction (V[%d] != V[%d])\n", x, y);
+        }
+      }
+      break;
 
     case 0xA000: // ANNN: Set Index (I) to NNN
       chip->I = opcode & 0x0FFF;
@@ -198,12 +248,37 @@ void emulate(Chip8 *chip){
         chip->draw_flag = 1;
     }
     break;
+    
+    case 0xE000:
+      switch(opcode & 0x00FF){
+        case 0x9E: //Ex9E skip next instruction if the key with value Vx is pressed
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            if(chip->keypad[chip->V[x]]){ //pressed = 1
+              chip->pc += 2;
+              printf("Ex9E keypad at %d pressed\n", chip->V[x]);
+            }
+          }
+        break;
+
+        case 0xA1: //ExA1 skip next instruction if the key with value Vx is not pressed
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            if(!chip->keypad[chip->V[x]]){
+              chip->pc += 2;
+              printf("ExA1 keypad at %d not pressed\n", chip->V[x]);
+            }
+          }
+        break;
+      }
+    break;
 
     case 0xF000:
       switch(opcode & 0x00FF){
         case 0x1E: //Fx1E (Set I = I + Vx)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
+            printf("SET I(%d) = I(%d) + Vx(%d)\n", chip->I, chip->I, chip->V[x]);
             chip->I += chip->V[x];
           } 
         break;
