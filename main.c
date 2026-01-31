@@ -127,6 +127,13 @@ int main(int argc, char **argv) {
             emulate(chip);
         }
 
+        if (chip->delay_timer > 0) {
+            chip->delay_timer--;
+        }
+        if (chip->sound_timer > 0) {
+            chip->sound_timer--;
+        }
+
         if (chip->draw_flag) {
             chip->draw_flag = 0;
 

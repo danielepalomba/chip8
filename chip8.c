@@ -102,6 +102,9 @@ void emulate(Chip8 *chip){
             chip->pc = chip->stack[chip->sp];
             printf("RET 0x%X\n", chip->pc);
             break;
+          default:
+            printf("Opcode unknown: 0x%X\n", opcode);
+            break;
         }
         break;
 
@@ -189,6 +192,51 @@ void emulate(Chip8 *chip){
             printf("8xy0 Set V[%d] = v[%d]\n", x,y);
           }
         break;
+
+        case 3: //XOR
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+            chip->V[x] = chip->V[x]^chip->V[y];
+            printf("XOR - Index: x = %d, y = %d\n", x,y);
+          }
+          break;
+        
+        case 4: //ADD
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+
+            if ((uint16_t)chip->V[x] + (uint16_t)chip->V[y] > 255) {
+                chip->V[0xF] = 1;
+            } else {
+                chip->V[0xF] = 0;
+            }
+
+            chip->V[x] += chip->V[y];
+            
+            printf("8xy4: V[%d] += V[%d] (Result: %d, Carry: %d)\n", 
+                    x, y, chip->V[x], chip->V[0xF]);
+          }
+          break;
+
+        case 5: //SUB
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+            if(chip->V[x] >= chip->V[y]){
+              chip->V[0xF] = 1;
+            }else{
+              chip->V[0xF] = 0;
+            }
+
+            chip->V[x] -= chip->V[y];
+            printf("SUB: V[%d] = V[%d] - V[%d] (VF=%d)\n", x,x,y,chip->V[0xF]);
+          }
+          break;
+        
+        default:
+          printf("Opcode unknown: 0x%X\n", opcode);
       }
     break;
 
@@ -270,11 +318,61 @@ void emulate(Chip8 *chip){
             }
           }
         break;
+
+        default:
+          printf("Opcode unknown: 0x%X\n", opcode);
       }
     break;
 
     case 0xF000:
       switch(opcode & 0x00FF){
+        case 0x07: //Fx07 LD Vx, DT Set Vx = delay_timer
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            chip->V[x] = chip->delay_timer;
+            printf("Fx07 V[%d] = %d(delay_timer)\n", x, chip->delay_timer);
+          }
+        break;
+
+        case 0x15: //Fx15 LD DT, Vx Set delay_timer = Vx
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            chip->delay_timer = chip->V[x];
+            printf("FX15 delay_timer = %d\n", chip->V[x]);
+          }
+        break;
+
+        case 0x29: // Fx29 Set I to location of sprite for digit Vx
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t digit = chip->V[x];
+            chip->I = digit * 5; 
+            printf("Set I to font char '%X' at address %X\n", digit, chip->I);
+          }
+          break;
+
+        case 0x33: // Fx33 Store BCD representation of Vx in memory locations I, I+1, and I+2
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t value = chip->V[x];
+
+            chip->memory[chip->I] = value / 100;       
+            chip->memory[chip->I + 1] = (value / 10) % 10; 
+            chip->memory[chip->I + 2] = value % 10;        
+            printf("BCD of %d stored at I(%d)\n", value, chip->I);
+          }
+          break;
+
+        case 0x55: // Fx55 Store V0..Vx in memory starting at I
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            for (int i = 0; i <= x; i++) {
+                chip->memory[chip->I + i] = chip->V[i];
+            }
+            chip->I = chip->I + x + 1;
+          }
+          break;
+
         case 0x1E: //Fx1E (Set I = I + Vx)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
@@ -282,6 +380,19 @@ void emulate(Chip8 *chip){
             chip->I += chip->V[x];
           } 
         break;
+
+        case 0x65: //Fx65 LD Vx, [I]
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            for(int i = 0; i<=x; i++){
+              chip->V[i] = chip->memory[chip->I + i];
+            }
+            chip->I = chip->I + x + 1;
+          }
+        break;
+
+        default:
+          printf("Opcode unknown: 0x%X\n", opcode);
       }
     break;
 
