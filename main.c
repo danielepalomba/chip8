@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <SDL2/SDL.h>
 #include "chip8.h"
 
@@ -14,7 +15,9 @@ int main(int argc, char **argv) {
         printf("USAGE: ./chip8 <path_to_rom>\n");
         return 1;
     }
-
+    
+    srand(time(NULL));
+      
     Chip8 *chip = init_chip8();
     if (!load_rom(argv[1], chip)) {
         fprintf(stderr, "Could not load the ROM.\n");

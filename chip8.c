@@ -193,16 +193,37 @@ void emulate(Chip8 *chip){
           }
         break;
 
-        case 3: // 8xy3 -> XOR (Set V[x] = V[x] XOR V[y])
+        case 0x1: //8xy1 -> OR (Set V[x] = V[x] OR V[y]) 
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
-            chip->V[x] = chip->V[x]^chip->V[y];
+            
+            chip->V[x] |= chip->V[y];
+            printf("OR - Index: x = %d, y = %d\n", x,y);
+          }
+          break;
+
+        case 0x2: //8xy2 -> AND (Set V[x] = V[x] AND V[y])
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+          
+            chip->V[x] &= chip->V[y];
+            printf("AND - Index x = %d, y = %d\n", x,y);
+          } 
+          break;
+
+        case 0x3: // 8xy3 -> XOR (Set V[x] = V[x] XOR V[y])
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+            
+            chip->V[x] ^= chip->V[y];
             printf("XOR - Index: x = %d, y = %d\n", x,y);
           }
           break;
         
-        case 4: // 8xy4 -> ADD (Set V[x] = V[x] + V[y], set V[F] = carry)
+        case 0x4: // 8xy4 -> ADD (Set V[x] = V[x] + V[y], set V[F] = carry)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
@@ -220,7 +241,7 @@ void emulate(Chip8 *chip){
           }
           break;
 
-        case 5: // 8xy5 -> SUB (Set Vx = Vx - Vy, set VF = NOT borrow)
+        case 0x5: // 8xy5 -> SUB (Set Vx = Vx - Vy, set VF = NOT borrow)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
@@ -234,7 +255,44 @@ void emulate(Chip8 *chip){
             printf("SUB: V[%d] = V[%d] - V[%d] (VF=%d)\n", x,x,y,chip->V[0xF]);
           }
           break;
-        
+
+        case 0x6: //8xy6 -> SHR (Set V[x] = V[x] SHR 1)
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+
+            chip->V[0xF] = (chip->V[x] & 0x1);
+            chip->V[x] >>= 1;
+            printf("V[%d] SHR 1 (VF=%d)\n", x, chip->V[0xF]);
+          }
+          break;
+          
+        case 0x7: //8xy7 -> SUBN (Set V[x] = V[y] - V[x], set V[F] = NOT borrow)
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t y = (opcode & 0x00F0) >> 4;
+            
+            if(chip->V[y] >= chip->V[x]){
+              chip->V[0xF] = 1;
+            }else{
+              chip->V[0xF] = 0;
+            }
+
+            chip->V[x] = chip->V[y] - chip->V[x];
+            printf("SUBN: V[%d] = V[%d] - V[%d] (VF=%d)\n", x,y,x,chip->V[0xF]);
+          }
+        break;
+
+        case 0xE: //8xyE -> SHL (Set V[x] = V[x] SHL 1)
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            
+            chip->V[0xF] = (chip->V[x] >> 7) & 0x1;
+            chip->V[x] <<= 1;
+
+            printf("V[%d] SHL 1 (VF=%d)\n", x,chip->V[0xF]);
+          }
+        break;
+
         default:
           printf("Opcode unknown: 0x%X\n", opcode);
       }
@@ -256,6 +314,22 @@ void emulate(Chip8 *chip){
       chip->I = opcode & 0x0FFF;
       printf("SET\n");
       break;
+
+    case 0xB000: //Bnnn -> JP (Jump to location nnn + V[0])
+      chip->pc = (opcode & 0x0FFF) + chip->V[0];
+      printf("JP to 0x%X + V[0](0x%X) = 0x%X\n", (opcode & 0x0FFF), chip->V[0], chip->pc);
+      break;
+
+    case 0xC000: //Cxkk -> RND (Set Vx = random byte AND kk)
+      {
+        uint8_t x = (opcode & 0x0F00) >> 8;
+        uint16_t kk = (opcode & 0x00FF); 
+
+        chip->V[x] = (rand() % 256) & kk;
+        printf("RND V[%d] = %d (Rand AND %d)\n", x, chip->V[x], kk);
+      }
+      break;
+      
 
     case 0xD000: //Dxyn -> DRW (Display n-byte sprite) 
     {
@@ -334,6 +408,26 @@ void emulate(Chip8 *chip){
           }
         break;
 
+        case 0x0A: //Fx0A -> LD Vx (Wait for a key press, store the value of the key in Vx.)
+          {
+            uint8_t x = (opcode & 0x0F00) >> 8;
+            uint8_t key_pressed = 0;
+
+            for(int i = 0; i<16; i++){
+              if(chip->keypad[i]){
+                chip->V[x] = i;
+                key_pressed = 1;
+                break;
+              }
+            }
+
+            if(!key_pressed) // Iterate over the same instruction
+              chip->pc -= 2;
+            else
+              printf("Key %d pressed, stored in V[%d]\n", chip->V[x], x);
+          }
+          break;
+
         case 0x15: //Fx15 -> LD DT (Set delay_timer = V[x])
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
@@ -341,6 +435,10 @@ void emulate(Chip8 *chip){
             printf("FX15 delay_timer = %d\n", chip->V[x]);
           }
         break;
+
+        case 0x18: //Fx18 -> LD ST (Set sound_timer = V[x])
+          chip->sound_timer = chip->V[((opcode & 0x0F00)>>8)];
+          break;
 
         case 0x29: // Fx29 -> LD F (Set I to location of sprite for digit V[x])
           {
