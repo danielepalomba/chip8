@@ -92,12 +92,12 @@ void emulate(Chip8 *chip){
       
     case 0x0000:
         switch(opcode & 0x00FF) {
-          case 0xE0: // 00E0: Clear Screen
+          case 0xE0: // 00E0 -> CLS (Clear the display)
             memset(chip->gfx, 0, sizeof(chip->gfx));
             chip->draw_flag = 1;
-            printf("CLS (Clear Screen)\n");
+            printf("CLS\n");
             break;
-          case 0xEE: // 00EE: Return from subroutine
+          case 0xEE: // 00EE -> RET (Return from subroutine)
             chip->sp--;
             chip->pc = chip->stack[chip->sp];
             printf("RET 0x%X\n", chip->pc);
@@ -108,12 +108,12 @@ void emulate(Chip8 *chip){
         }
         break;
 
-    case 0x1000: // 1NNN: Jump to NNN
+    case 0x1000: // 1nnn -> JP (Jump to nnn)
       chip->pc = opcode & 0x0FFF; 
       printf("JUMP a 0x%X\n", chip->pc);
       break;
     
-    case 0x2000: //CALL (call subroutine at nnn)
+    case 0x2000: //2nnn -> CALL (Call subroutine at nnn)
       {
         uint16_t nnn = (opcode & 0x0FFF);
         chip->stack[chip->sp] = chip->pc;
@@ -125,7 +125,7 @@ void emulate(Chip8 *chip){
       }
       break;
     
-    case 0x3000: //SE 3xkk -> Skip next instruction if Vx = kk
+    case 0x3000: //3xkk -> SE (Skip next instruction if Vx = kk)
       {
         uint8_t x = (opcode & 0x0F00) >> 8;
         uint8_t kk = (opcode & 0x00FF);
@@ -137,7 +137,7 @@ void emulate(Chip8 *chip){
       }
     break;
 
-    case 0x4000: //SNE 4xkk (Skip next instruction if Vx != kk)
+    case 0x4000: //4xkk -> SNE (Skip next instruction if Vx != kk)
       {
         uint8_t kk = (opcode & 0x00FF);
         uint8_t x = (opcode & 0x0F00) >> 8;
@@ -148,7 +148,7 @@ void emulate(Chip8 *chip){
       }
       break;
     
-    case 0x5000: //5xy0 Skip next instruction if Vx = Vy
+    case 0x5000: //5xy0 -> SE (Skip next instruction if Vx = Vy)
       {
         uint8_t x = (opcode & 0x0F00) >> 8;
         uint8_t y = (opcode & 0x00F0) >> 4;
@@ -160,7 +160,7 @@ void emulate(Chip8 *chip){
       }
     break;
 
-    case 0x6000: //6XNN -> set V[X] = NN
+    case 0x6000: //6xkk -> LD (Set V[x] = kk)
       {
       uint8_t x = (opcode & 0x0F00) >> 8;
       uint8_t nn = (opcode & 0x00FF);
@@ -170,7 +170,7 @@ void emulate(Chip8 *chip){
       }
       break;
 
-    case 0x7000: // 7XNN: add NN to V[X]
+    case 0x7000: // 7xkk -> ADD (Set V[x] = V[x] + kk)
     {
         uint8_t x = (opcode & 0x0F00) >> 8;
         uint8_t nn = (opcode & 0x00FF);
@@ -183,7 +183,7 @@ void emulate(Chip8 *chip){
     
     case 0x8000:
       switch(opcode & 0x000F){
-        case 0: //8xy0
+        case 0: // 8xy0 -> LD (Set V[x] = V[y])
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
@@ -193,7 +193,7 @@ void emulate(Chip8 *chip){
           }
         break;
 
-        case 3: //XOR
+        case 3: // 8xy3 -> XOR (Set V[x] = V[x] XOR V[y])
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
@@ -202,7 +202,7 @@ void emulate(Chip8 *chip){
           }
           break;
         
-        case 4: //ADD
+        case 4: // 8xy4 -> ADD (Set V[x] = V[x] + V[y], set V[F] = carry)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
@@ -220,7 +220,7 @@ void emulate(Chip8 *chip){
           }
           break;
 
-        case 5: //SUB
+        case 5: // 8xy5 -> SUB (Set Vx = Vx - Vy, set VF = NOT borrow)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t y = (opcode & 0x00F0) >> 4;
@@ -240,7 +240,7 @@ void emulate(Chip8 *chip){
       }
     break;
 
-    case 0x9000: // 9xy0 Skip next instruction if Vx != Vy
+    case 0x9000: // 9xy0 -> SNE (Skip next instruction if Vx != Vy)
       {
         uint8_t x = (opcode & 0x0F00) >> 8;
         uint8_t y = (opcode & 0x00F0) >> 4;
@@ -252,12 +252,12 @@ void emulate(Chip8 *chip){
       }
       break;
 
-    case 0xA000: // ANNN: Set Index (I) to NNN
+    case 0xA000: // Annn -> LD (Set Index (I) to nnn)
       chip->I = opcode & 0x0FFF;
       printf("SET\n");
       break;
 
-    case 0xD000: //Dxyn (Display n-byte sprite) 
+    case 0xD000: //Dxyn -> DRW (Display n-byte sprite) 
     {
         uint8_t vx = (opcode & 0x0F00) >> 8;
         uint8_t vy = (opcode & 0x00F0) >> 4;
@@ -299,7 +299,7 @@ void emulate(Chip8 *chip){
     
     case 0xE000:
       switch(opcode & 0x00FF){
-        case 0x9E: //Ex9E skip next instruction if the key with value Vx is pressed
+        case 0x9E: //Ex9E -> SKP (Skip next instruction if the key with value Vx is pressed)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             if(chip->keypad[chip->V[x]]){ //pressed = 1
@@ -309,7 +309,7 @@ void emulate(Chip8 *chip){
           }
         break;
 
-        case 0xA1: //ExA1 skip next instruction if the key with value Vx is not pressed
+        case 0xA1: //ExA1 -> SKNP (Skip next instruction if the key with value Vx is not pressed)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             if(!chip->keypad[chip->V[x]]){
@@ -326,7 +326,7 @@ void emulate(Chip8 *chip){
 
     case 0xF000:
       switch(opcode & 0x00FF){
-        case 0x07: //Fx07 LD Vx, DT Set Vx = delay_timer
+        case 0x07: //Fx07 -> LD (Set Vx = delay_timer)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             chip->V[x] = chip->delay_timer;
@@ -334,7 +334,7 @@ void emulate(Chip8 *chip){
           }
         break;
 
-        case 0x15: //Fx15 LD DT, Vx Set delay_timer = Vx
+        case 0x15: //Fx15 -> LD DT (Set delay_timer = V[x])
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             chip->delay_timer = chip->V[x];
@@ -342,7 +342,7 @@ void emulate(Chip8 *chip){
           }
         break;
 
-        case 0x29: // Fx29 Set I to location of sprite for digit Vx
+        case 0x29: // Fx29 -> LD F (Set I to location of sprite for digit V[x])
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t digit = chip->V[x];
@@ -351,7 +351,7 @@ void emulate(Chip8 *chip){
           }
           break;
 
-        case 0x33: // Fx33 Store BCD representation of Vx in memory locations I, I+1, and I+2
+        case 0x33: // Fx33 -> LD B (Store BCD representation of V[x] in memory locations I, I+1, and I+2)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             uint8_t value = chip->V[x];
@@ -363,7 +363,7 @@ void emulate(Chip8 *chip){
           }
           break;
 
-        case 0x55: // Fx55 Store V0..Vx in memory starting at I
+        case 0x55: // Fx55 -> LD [I] (Store V[0]..V[x] in memory starting at I)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             for (int i = 0; i <= x; i++) {
@@ -373,7 +373,7 @@ void emulate(Chip8 *chip){
           }
           break;
 
-        case 0x1E: //Fx1E (Set I = I + Vx)
+        case 0x1E: //Fx1E -> ADD I (Set I = I + V[x])
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             printf("SET I(%d) = I(%d) + Vx(%d)\n", chip->I, chip->I, chip->V[x]);
@@ -381,7 +381,7 @@ void emulate(Chip8 *chip){
           } 
         break;
 
-        case 0x65: //Fx65 LD Vx, [I]
+        case 0x65: //Fx65 -> LD V[x] (Fills V[0]...V[x] with values from memory starting at address I)
           {
             uint8_t x = (opcode & 0x0F00) >> 8;
             for(int i = 0; i<=x; i++){
